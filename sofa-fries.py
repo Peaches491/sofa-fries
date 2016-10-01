@@ -25,7 +25,10 @@ def parse_args():
 
 def omdb_query(name):
     r = requests.get("http://www.omdbapi.com/?type=movie&s=%s" % name)
-    return r.json()
+    if r.status_code < 200 or r.status_code >= 300:
+        return None
+    else:
+        return r.json()
 
 def execute_prompt(existing_file, results):
     choice = None
