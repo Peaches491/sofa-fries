@@ -54,6 +54,11 @@ def prompt_user(existing_file, metadata_type):
 
     # Perform OMDB query
     results = omdb_query(movie_name)
+    if not results or (results.get("Response").lower() == "false"):
+        if "Error" in results:
+            print(results["Error"])
+        return None
+
     results = results["Search"]
     print("  Number of search results: %d" % len(results))
 
