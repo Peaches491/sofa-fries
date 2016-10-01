@@ -142,6 +142,9 @@ def main():
         if args.ignored_only and not unknown_file in files_list:
             print("Skipping file (no *.unknown.ignore): %s" % existing_file)
             continue
+        if os.path.getsize(existing_file) < 1e6:
+            print("Skipping file (less than 1MB): %s" % existing_file)
+            continue
 
         metadata = prompt_user(existing_file, args.metadata_type)
         if metadata is not None:
