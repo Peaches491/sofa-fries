@@ -73,7 +73,9 @@ def prompt_user(existing_file, metadata_type):
     results = omdb_query(movie_name)
     if not results or (results.get("Response").lower() == "false"):
         if "Error" in results:
-            print(results["Error"])
+            print("ERROR: %s" % results["Error"])
+        else:
+            print("Unknown error")
         return None
 
     results = results["Search"]
