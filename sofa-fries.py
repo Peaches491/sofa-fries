@@ -69,7 +69,10 @@ def prompt_user(existing_file, metadata_type):
         return selection["Year"]
 
 def confirm(prompt):
-    return raw_input("%s y/[n]: " % prompt)
+    response = None
+    while response not in ["y", "n"]:
+        response = raw_input("%s y/[n]: " % prompt).lower()
+    return response == "y"
 
 def main():
     parser = argparse.ArgumentParser()
