@@ -1,1 +1,2 @@
-npyscreen==4.10.5
+## The following requirements were added by pip freeze:
+requests==2.11.1

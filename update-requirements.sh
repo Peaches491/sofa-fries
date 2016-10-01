@@ -16,6 +16,7 @@ function errecho() {
   PS1="" source "$script_dir/venv/bin/activate"
 
   echo "Updating requirements..."
-  pip freeze -r "$script_dir/requirements.txt"
+  requirements_file="$script_dir/requirements.txt"
+  pip freeze -r "$requirements_file" > "$requirements_file"
   echo "Done."
 )
