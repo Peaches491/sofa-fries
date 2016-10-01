@@ -64,13 +64,13 @@ def execute_prompt(existing_file, results):
 
 def prompt_user(existing_file, metadata_type):
     # Construct search string from filename
-    path_components = existing_file.rsplit(".", 1)
-    movie_name = os.path.basename(path_components[0])
+    path_components = file_to_path_components(existing_file)
+    query_string = os.path.basename(path_components[0]).replace("_", " ")
     print(os.path.basename(existing_file))
-    print("  Search query: \"%s\"" % movie_name)
+    print("  Search query: \"%s\"" % query_string)
 
     # Perform OMDB query
-    results = omdb_query(movie_name)
+    results = omdb_query(query_string)
     if not results or (results.get("Response").lower() == "false"):
         if "Error" in results:
             print("ERROR: %s" % results["Error"])
@@ -109,11 +109,19 @@ def traverse_directory(directory):
 def file_to_path_components(existing_file):
     return existing_file.rsplit(".", 1)
 
+def file_path_to_renamed_file(existing_file, metadata):
+    path_components = file_to_path_components(existing_file)
+    return "%s (%s).%s" % (path_components[0], metadata, ".".join(path_components[1:]))
+
+def file_path_to_unknown_file(existing_file):
+    path_components = file_to_path_components(existing_file)
+    return "%s.unknown.ignore" % path_components[0]
+
 def perform_rename(existing_file, metadata, remove_ignore_files, dryrun):
     path_components = file_to_path_components(existing_file)
-    renamed_file = "%s (%s).%s" % (path_components[0],
-                                   metadata,
-                                   ".".join(path_components[1:]))
+    renamed_file = file_path_to_renamed_file(existing_file, metadata)
+    unknown_file = file_path_to_unknown_file(existing_file)
+
     print("Renaming:")
     print("  Old: %s" % existing_file)
     print("  New: %s" % renamed_file)
@@ -137,8 +145,7 @@ def main():
     for existing_file in files_list:
         if existing_file.endswith(".ignore"):
             continue
-        path_components = file_to_path_components(existing_file)
-        unknown_file = "%s.unknown.ignore" % path_components[0]
+        unknown_file = file_path_to_unknown_file(existing_file)
         if args.ignored_only and not unknown_file in files_list:
             print("Skipping file (no *.unknown.ignore): %s" % existing_file)
             continue
