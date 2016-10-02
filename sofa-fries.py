@@ -5,6 +5,7 @@ from __future__ import print_function
 import argparse
 from glob import glob
 import os
+import re
 import requests
 import time
 import webbrowser
@@ -69,7 +70,7 @@ def execute_prompt(existing_file, results):
 def prompt_user(existing_file, metadata_type, assume_single_result):
     # Construct search string from filename
     path_components = file_to_path_components(existing_file)
-    query_string = os.path.basename(path_components[0]).replace("_", " ")
+    query_string = re.sub("\s+", " ", os.path.basename(path_components[0]).replace("_", " ").strip())
     print(os.path.basename(existing_file))
     print("  Search query: \"%s\"" % query_string)
 
