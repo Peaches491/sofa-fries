@@ -28,7 +28,7 @@ def parse_args():
     return parser.parse_args()
 
 def omdb_query(name):
-    r = requests.get("http://www.omdbapi.com/?type=movie&s=%s" % name)
+    r = requests.get("http://www.omdbapi.com/?r=json&type=movie&s=%s" % name)
     if r.status_code < 200 or r.status_code >= 300:
         return None
     else:
