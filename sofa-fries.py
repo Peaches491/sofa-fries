@@ -16,6 +16,8 @@ def parse_args():
             help="The directory of movies to be scanned")
     parser.add_argument("--metadata_type", default="imdb", choices=["year", "imdb"],
             help="The type of metadata to be appended to the filenames")
+    parser.add_argument("--recursive", default=False, action="store_true",
+            help="If set, recurse into nested directories in media_dir")
     parser.add_argument("--ignored_only", default=False, action="store_true",
             help="If set, only scan files ignored by CouchPotato (if *.unknown.ignore is present)")
     parser.add_argument("--remove_ignore_files", default=False, action="store_true",
@@ -114,13 +116,17 @@ def confirm(prompt):
         response = raw_input("%s y/[n]: " % prompt).lower()
     return response == "y"
 
-def traverse_directory(directory):
-    for root, directories, files in os.walk(directory):
-        for f in sorted(files):
-            yield os.path.join(root, f)
-        for d in sorted(directories):
-            for f in traverse_directory(os.path.join(root, d)):
-                yield f
+def traverse_directory(directory, recursive=False):
+    if not recursive:
+        for f in sorted(glob(os.path.join(directory, "*"))):
+            yield f
+    else:
+        for root, directories, files in os.walk(directory):
+            for f in sorted(files):
+                yield os.path.join(root, f)
+            for d in sorted(directories):
+                for f in traverse_directory(os.path.join(root, d)):
+                    yield f
 
 def file_to_path_components(existing_file):
     return existing_file.rsplit(".", 1)
@@ -163,7 +169,7 @@ def main():
 
     print("Using media directory: %s" % args.media_dir)
 
-    files_list = [f for f in traverse_directory(args.media_dir)]
+    files_list = [f for f in traverse_directory(args.media_dir, args.recursive)]
     for existing_file in files_list:
         if existing_file.endswith(".ignore"):
             continue
