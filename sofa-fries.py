@@ -19,6 +19,10 @@ def parse_args():
             help="If set, only scan files ignored by CouchPotato (if *.unknown.ignore is present)")
     parser.add_argument("--remove_ignore_files", default=False, action="store_true",
             help="If set, remove CouchPotatos *.unknown.ignore file, signaling a rescan")
+    parser.add_argument("--assume_single_result", default=False, action="store_true",
+            help="If set, assume queries that return a single result are correct")
+    parser.add_argument("--no_confirm", default=False, action="store_true",
+            help="If set, do not prompt for confirmation on rename")
     parser.add_argument("--dryrun", default=False, action="store_true",
             help="If set, prompt as normal, but do not alter any files")
     return parser.parse_args()
@@ -62,7 +66,7 @@ def execute_prompt(existing_file, results):
             print("Invalid selection: \"%s\"" % user_text)
             print("Please select a number 0 - %d, 's' to skip this entry, or 'q' to quit" % (len(results)-1))
 
-def prompt_user(existing_file, metadata_type):
+def prompt_user(existing_file, metadata_type, assume_single_result):
     # Construct search string from filename
     path_components = file_to_path_components(existing_file)
     query_string = os.path.basename(path_components[0]).replace("_", " ")
@@ -80,10 +84,13 @@ def prompt_user(existing_file, metadata_type):
 
     results = results["Search"]
     print("  Number of search results: %d" % len(results))
-
-    selection_index = execute_prompt(existing_file, results)
-    if selection_index is None:
-        return None
+    if assume_single_result and len(results) == 1:
+        print("  Assuming only result is correct: %s - (%s)" % (results[0]["Title"], results[0]["Year"]))
+        selection_index = 0
+    else:
+        selection_index = execute_prompt(existing_file, results)
+        if selection_index is None:
+            return None
 
     selection = results[selection_index]
 
@@ -111,13 +118,19 @@ def file_to_path_components(existing_file):
 
 def file_path_to_renamed_file(existing_file, metadata):
     path_components = file_to_path_components(existing_file)
-    return "%s (%s).%s" % (path_components[0], metadata, ".".join(path_components[1:]))
+    return "%s (%s).%s" % (path_components[0],
+                           metadata,
+                           ".".join(path_components[1:]))
 
 def file_path_to_unknown_file(existing_file):
     path_components = file_to_path_components(existing_file)
     return "%s.unknown.ignore" % path_components[0]
 
-def perform_rename(existing_file, metadata, remove_ignore_files, dryrun):
+def perform_rename(existing_file,
+                   metadata,
+                   remove_ignore_files,
+                   no_confirm,
+                   dryrun):
     path_components = file_to_path_components(existing_file)
     renamed_file = file_path_to_renamed_file(existing_file, metadata)
     unknown_file = file_path_to_unknown_file(existing_file)
@@ -125,7 +138,7 @@ def perform_rename(existing_file, metadata, remove_ignore_files, dryrun):
     print("Renaming:")
     print("  Old: %s" % existing_file)
     print("  New: %s" % renamed_file)
-    if confirm("Confirm rename?"):
+    if no_confirm or confirm("Confirm rename?"):
         if dryrun:
             print("(dryrun) os.rename(existing_file, renamed_file)")
         else:
@@ -153,9 +166,13 @@ def main():
             print("Skipping file (less than 1MB): %s" % existing_file)
             continue
 
-        metadata = prompt_user(existing_file, args.metadata_type)
+        metadata = prompt_user(existing_file, args.metadata_type, args.assume_single_result)
         if metadata is not None:
-            perform_rename(existing_file, metadata, args.remove_ignore_files, args.dryrun)
+            perform_rename(existing_file,
+                           metadata,
+                           args.remove_ignore_files,
+                           args.no_confirm,
+                           args.dryrun)
         else:
             print("Skipping %s" % existing_file)
         time.sleep(1)
