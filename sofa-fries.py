@@ -68,9 +68,9 @@ def execute_prompt(existing_file, results):
         user_text = raw_input("Select movie from list, (s)kip, or (q)uit: ")
         if user_text == "q":
             quit(0)
-        if user_text == "s":
+        elif user_text == "s":
             return None
-        if user_text == "m":
+        elif user_text == "m":
             manual = raw_input("Enter manual search query: ")
             manual_status_code, manual_results = omdb_query(manual)
             if not check_query_success(manual_status_code, manual_results):
@@ -106,17 +106,16 @@ def prompt_user(existing_file, metadata_type, assume_single_result):
 
     # Perform OMDB query
     status_code, results = omdb_query(query_string)
-    if not check_query_success(status_code, results):
-        return None
-
-    search_title = query_string
-    while results["Response"] == "False":
-        print("No results found for \"%s\"" % search_title)
-        search_title = raw_input("Enter a title manually, or (s)kip: ")
-        if search_title == "s":
-            return None
-        status_code, results = omdb_query(search_title)
-        print(results)
+    while not check_query_success(status_code, results):
+        print("No results found for \"%s\"" % query_string)
+        query_string = None
+        while not query_string:
+            query_string = raw_input("Enter a title manually, (s)kip, or (q)uit: ").strip()
+            if query_string == "q":
+                quit(0)
+            elif query_string == "s":
+                return None
+        status_code, results = omdb_query(query_string)
 
     results = results["Search"]
     print("  Number of search results: %d" % len(results))
