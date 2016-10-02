@@ -30,10 +30,7 @@ def parse_args():
 
 def omdb_query(name):
     r = requests.get("http://www.omdbapi.com/?r=json&type=movie&s=%s" % name)
-    if r.status_code < 200 or r.status_code >= 300:
-        return None
-    else:
-        return r.json()
+    return r.status_code, r.json()
 
 def execute_prompt(existing_file, results):
     choice = None
@@ -75,7 +72,18 @@ def prompt_user(existing_file, metadata_type, assume_single_result):
     print("  Search query: \"%s\"" % query_string)
 
     # Perform OMDB query
-    results = omdb_query(query_string)
+    status_code, results = omdb_query(query_string)
+    if results and (results.get("Response").lower() == "false"):
+        if "Error" in results:
+            print("ERROR: %s" % results["Error"])
+        else:
+            print("ERROR: Unknown")
+        return None
+    elif status_code < 200 and status_code >= 300:
+        print("ERROR: Request failed: %d" % status_code)
+    elif not results:
+        print("ERROR: Response empty")
+
     if not results or (results.get("Response").lower() == "false"):
         if "Error" in results:
             print("ERROR: %s" % results["Error"])
@@ -167,6 +175,7 @@ def main():
             print("Skipping file (less than 1MB): %s" % existing_file)
             continue
 
+        print()
         metadata = prompt_user(existing_file, args.metadata_type, args.assume_single_result)
         if metadata is not None:
             perform_rename(existing_file,
@@ -177,7 +186,6 @@ def main():
         else:
             print("Skipping %s" % existing_file)
         time.sleep(1)
-        print()
 
 if __name__ == "__main__":
     main()
