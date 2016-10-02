@@ -34,12 +34,33 @@ def omdb_query(name):
     r = requests.get("http://www.omdbapi.com/?r=json&type=movie&s=%s" % name)
     return r.status_code, r.json()
 
+def check_query_success(status_code, results):
+    if results and (results.get("Response").lower() == "false"):
+        if "Error" in results:
+            print("ERROR: %s" % results["Error"])
+        else:
+            print("ERROR: Unknown")
+        return None
+    elif status_code < 200 and status_code >= 300:
+        print("ERROR: Request failed: %d" % status_code)
+    elif not results:
+        print("ERROR: Response empty")
+
+    if not results or (results.get("Response").lower() == "false"):
+        if "Error" in results:
+            print("ERROR: %s" % results["Error"])
+        else:
+            print("Unknown error")
+        return None
+    return True
+
 def execute_prompt(existing_file, results):
     choice = None
     while choice is None:
         for index, option in enumerate(results):
             print("(%d) %s - (%s)" % (index, option["Title"], option["Year"]))
         print("(b0) Open IMDB page for item 0 in your web browser")
+        print("(m) Enter search term manually")
         print("(s) Skip this movie")
         print("(q) Quit")
 
@@ -49,6 +70,16 @@ def execute_prompt(existing_file, results):
             quit(0)
         if user_text == "s":
             return None
+        if user_text == "m":
+            manual = raw_input("Enter manual search query: ")
+            manual_status_code, manual_results = omdb_query(manual)
+            if not check_query_success(manual_status_code, manual_results):
+                print("Manual query unsuccessful.")
+            else:
+                results = manual_results["Search"]
+                status_code = manual_status_code
+            choice = None
+            continue
 
         try:
             operator = None
@@ -75,23 +106,17 @@ def prompt_user(existing_file, metadata_type, assume_single_result):
 
     # Perform OMDB query
     status_code, results = omdb_query(query_string)
-    if results and (results.get("Response").lower() == "false"):
-        if "Error" in results:
-            print("ERROR: %s" % results["Error"])
-        else:
-            print("ERROR: Unknown")
+    if not check_query_success(status_code, results):
         return None
-    elif status_code < 200 and status_code >= 300:
-        print("ERROR: Request failed: %d" % status_code)
-    elif not results:
-        print("ERROR: Response empty")
 
-    if not results or (results.get("Response").lower() == "false"):
-        if "Error" in results:
-            print("ERROR: %s" % results["Error"])
-        else:
-            print("Unknown error")
-        return None
+    search_title = query_string
+    while results["Response"] == "False":
+        print("No results found for \"%s\"" % search_title)
+        search_title = raw_input("Enter a title manually, or (s)kip: ")
+        if search_title == "s":
+            return None
+        status_code, results = omdb_query(search_title)
+        print(results)
 
     results = results["Search"]
     print("  Number of search results: %d" % len(results))
