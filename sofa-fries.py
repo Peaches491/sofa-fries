@@ -54,12 +54,14 @@ def check_query_success(status_code, results):
         return None
     return True
 
-def execute_prompt(existing_file, results):
+def execute_prompt(existing_file, results, metadata_type):
     choice = None
     while choice is None:
+        print()
         for index, option in enumerate(results):
             print("(%d) %s - (%s)" % (index, option["Title"], option["Year"]))
         print("(b0) Open IMDB page for item 0 in your web browser")
+        print("(i) Enter IMDB ID manually")
         print("(m) Enter search term manually")
         print("(s) Skip this movie")
         print("(q) Quit")
@@ -70,6 +72,12 @@ def execute_prompt(existing_file, results):
             quit(0)
         if user_text == "s":
             return None
+        if user_text == "i":
+            imdb_id = raw_input("Enter IMDB ID: ")
+            if not confirm("Confirm ID \"%s\"?" % imdb_id):
+                continue
+            else:
+                return imdb_id
         if user_text == "m":
             manual = raw_input("Enter manual search query: ")
             manual_status_code, manual_results = omdb_query(manual)
@@ -78,7 +86,6 @@ def execute_prompt(existing_file, results):
             else:
                 results = manual_results["Search"]
                 status_code = manual_status_code
-            choice = None
             continue
 
         try:
@@ -92,7 +99,13 @@ def execute_prompt(existing_file, results):
                 print()
                 webbrowser.open_new_tab("https://www.imdb.com/title/%s" % results[selection_index]["imdbID"])
                 continue
-            return selection_index
+
+            selection = results[selection_index]
+            if metadata_type == "imdb":
+                return selection["imdbID"]
+            elif metadata_type == "year":
+                return selection["Year"]
+
         except ValueError:
             print("Invalid selection: \"%s\"" % user_text)
             print("Please select a number 0 - %d, 's' to skip this entry, or 'q' to quit" % (len(results)-1))
@@ -106,7 +119,7 @@ def prompt_user(existing_file, metadata_type, assume_single_result):
 
     # Perform OMDB query
     status_code, results = omdb_query(query_string)
-    if not check_query_success(status_code, results):
+    if not check_query_success(status_code, results) and status_code > 400:
         return None
 
     search_title = query_string
@@ -122,18 +135,11 @@ def prompt_user(existing_file, metadata_type, assume_single_result):
     print("  Number of search results: %d" % len(results))
     if assume_single_result and len(results) == 1:
         print("  Assuming only result is correct: %s - (%s)" % (results[0]["Title"], results[0]["Year"]))
-        selection_index = 0
+        metadata = results[0][metadata_type]
     else:
-        selection_index = execute_prompt(existing_file, results)
-        if selection_index is None:
-            return None
+        metadata = execute_prompt(existing_file, results, metadata_type)
 
-    selection = results[selection_index]
-
-    if metadata_type == "imdb":
-        return selection["imdbID"]
-    elif metadata_type == "year":
-        return selection["Year"]
+    return metadata
 
 def confirm(prompt):
     response = None
